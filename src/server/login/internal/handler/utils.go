@@ -58,7 +58,7 @@ func parseFloat32(req *http.Request, key string) (float32, bool) {
 	return data, true
 }
 
-func sayErr(w http.ResponseWriter, errcode int32) {
+func sayErr(w http.ResponseWriter, errcode Errcode) {
 	w.Write(jsonMarshal(Error{errcode}))
 }
 

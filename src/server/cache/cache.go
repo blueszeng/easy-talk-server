@@ -37,5 +37,5 @@ func update(dt float32) {
 }
 
 func checkOnlineNum() {
-	log.Release("online player num: %d", 0)
+	log.Release("online player num: %d", getInnerPlayerNum())
 }

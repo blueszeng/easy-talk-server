@@ -2,38 +2,188 @@ package handler
 
 import (
 	"net/http"
+	"server/base/utils"
 	"server/cache"
 )
 
-type Error struct {
-	Errcode int32 `json:"errcode"`
-}
-
-type PushResponse struct {
-	Errcode int32 `json:"errcode"`
-	Pid     int64 `json:"pid"`
-}
-
-type PullResponse struct {
-	Errcode int32        `json:"errcode"`
-	Msgs    []*cache.Msg `json:"msgs"`
-}
-
-// errcode
-const (
-	Success int32 = 0
-	Failed  int32 = 1
-)
-
-////////////////////////////////////////////
-// func
 //
+// handle push
+//
+var actionHandler = map[Action]Handler{
+	Login:          handleLogin,
+	UpdateLocation: handleUpdateLocation,
+	SendMsg:        handleSendMsg,
+	ChangeName:     handleChangeName,
+}
+
 func HandlePush(w http.ResponseWriter, req *http.Request) {
 	if !checkMethodAndParseForm(req, "HandlePush") {
 		return
 	}
+
+	action, ok := parseString(req, "action")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if len(action) == 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	handler := actionHandler[Action(action)]
+	if handler == nil {
+		utils.LogErr("HandlePush", "invalid action: %s", action)
+		sayErr(w, Failed)
+		return
+	}
+
+	handler(w, req)
 }
 
+func handleLogin(w http.ResponseWriter, req *http.Request) {
+	did, ok := parseString(req, "did")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if len(did) == 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	player := cache.GetPlayerByDid(did)
+	if player == nil {
+		utils.InvalidValueErr("handleLogin", "player == nil")
+		sayErr(w, Failed)
+		return
+	}
+
+	resp := &PushResponse{
+		Errcode: Success,
+		Pid:     player.Pid,
+		Name:    player.Name,
+	}
+	w.Write(jsonMarshal(resp))
+}
+
+func handleUpdateLocation(w http.ResponseWriter, req *http.Request) {
+	pid, ok := parseInt64(req, "pid")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if pid <= 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	locationX, ok := parseFloat32(req, "locationX")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	locationY, ok := parseFloat32(req, "locationY")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	locationDetail, ok := parseString(req, "locationDetail")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	player := cache.UpdatePlayerLocationByPid(pid, locationX, locationY, locationDetail)
+	if player == nil {
+		sayErr(w, Failed)
+		return
+	}
+
+	sayErr(w, Success)
+}
+
+func handleSendMsg(w http.ResponseWriter, req *http.Request) {
+	pid, ok := parseInt64(req, "pid")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if pid <= 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	msg, ok := parseString(req, "msg")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if len(msg) == 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	if cache.AddMsgByPid(pid, msg) == nil {
+		sayErr(w, Failed)
+		return
+	}
+
+	sayErr(w, Success)
+}
+
+func handleChangeName(w http.ResponseWriter, req *http.Request) {
+	pid, ok := parseInt64(req, "pid")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if pid <= 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	name, ok := parseString(req, "name")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if len(name) == 0 {
+		sayErr(w, Failed)
+		return
+	}
+
+	nameArr := []rune(name)
+	if len(nameArr) > MaxNameLen {
+		sayErr(w, NameTooLong)
+		return
+	}
+
+	player := cache.ChangePlayerNameByPid(pid, name)
+	if player == nil {
+		sayErr(w, Failed)
+		return
+	}
+
+	resp := &PushResponse{
+		Errcode: Success,
+		Name:    player.Name,
+	}
+	w.Write(jsonMarshal(resp))
+}
+
+//
+// handle pull
+//
 func HandlePull(w http.ResponseWriter, req *http.Request) {
 	if !checkMethodAndParseForm(req, "HandlePull") {
 		return

@@ -39,6 +39,16 @@ func GetPlayerByPid(pid int64) *Player {
 	return ret
 }
 
+func UpdatePlayerLocationByPid(pid int64, locationX float32, locationY float32, locationDetail string) *Player {
+	ret, _ := srv.AddTask(updatePlayerLocationByPid, service.Args{pid, locationX, locationY, locationDetail}).Result().(*Player)
+	return ret
+}
+
+func ChangePlayerNameByPid(pid int64, name string) *Player {
+	ret, _ := srv.AddTask(changePlayerNameByPid, service.Args{pid, name}).Result().(*Player)
+	return ret
+}
+
 //
 // implement
 //
@@ -65,7 +75,7 @@ func getPlayerByDid(args service.Args) service.Result {
 		if playerInfo == nil {
 			playerInfo = &db.PlayerInfo{
 				Did:  did,
-				Name: "Talker" + strconv.FormatInt(time.Now().Unix(), 10),
+				Name: "ET" + strconv.FormatInt(time.Now().Unix(), 10),
 			}
 			if !db.AddPlayerInfo(playerInfo) {
 				return nil
@@ -103,6 +113,105 @@ func getPlayerByPid(args service.Args) service.Result {
 	return getInnerPlayerByPid(pid)
 }
 
+func updatePlayerLocationByPid(args service.Args) service.Result {
+	if len(args) < 4 {
+		utils.ArgsNumberErr("updatePlayerLocationByPid", 4)
+		return nil
+	}
+
+	pid, ok := args[0].(int64)
+	if !ok {
+		utils.ArgsTypeCastErr("updatePlayerLocationByPid", 0)
+		return nil
+	}
+
+	if pid <= 0 {
+		utils.InvalidValueErr("updatePlayerLocationByPid", "pid <= 0")
+		return nil
+	}
+
+	locationX, ok := args[1].(float32)
+	if !ok {
+		utils.ArgsTypeCastErr("updatePlayerLocationByPid", 1)
+		return nil
+	}
+
+	locationY, ok := args[2].(float32)
+	if !ok {
+		utils.ArgsTypeCastErr("updatePlayerLocationByPid", 2)
+		return nil
+	}
+
+	locationDetail, ok := args[3].(string)
+	if !ok {
+		utils.ArgsTypeCastErr("updatePlayerLocationByPid", 3)
+		return nil
+	}
+
+	player := getInnerPlayerByPid(pid)
+	if player == nil {
+		utils.InvalidValueErr("updatePlayerLocationByPid", "player == nil")
+		return nil
+	}
+
+	player.LocationX = locationX
+	player.LocationY = locationY
+	player.LocationDetail = locationDetail
+
+	return player
+}
+
+func changePlayerNameByPid(args service.Args) service.Result {
+	if len(args) < 2 {
+		utils.ArgsNumberErr("changePlayerNameByPid", 2)
+		return nil
+	}
+
+	pid, ok := args[0].(int64)
+	if !ok {
+		utils.ArgsTypeCastErr("changePlayerNameByPid", 0)
+		return nil
+	}
+
+	if pid <= 0 {
+		utils.InvalidValueErr("changePlayerNameByPid", "pid <= 0")
+		return nil
+	}
+
+	name, ok := args[1].(string)
+	if !ok {
+		utils.ArgsTypeCastErr("changePlayerNameByPid", 1)
+		return nil
+	}
+
+	if len(name) == 0 {
+		utils.InvalidValueErr("changePlayerNameByPid", "len(name) == 0")
+		return nil
+	}
+
+	player := getInnerPlayerByPid(pid)
+	if player == nil {
+		utils.InvalidValueErr("changePlayerNameByPid", "player == nil")
+		return nil
+	}
+
+	if name == player.Name {
+		return player
+	}
+
+	playerInfo := &db.PlayerInfo{
+		Pid:  player.Pid,
+		Name: name,
+	}
+	if !db.UpdatePlayerInfo(playerInfo) {
+		utils.InvalidValueErr("changePlayerNameByPid", "db.UpdatePlayerInfo failed")
+		return nil
+	}
+
+	player.Name = name
+	return player
+}
+
 //
 // inner func
 //
@@ -134,4 +243,8 @@ func getInnerPlayerByPid(pid int64) *Player {
 	}
 
 	return pidToPlayer[pid]
+}
+
+func getInnerPlayerNum() int {
+	return len(pidToPlayer)
 }

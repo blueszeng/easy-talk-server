@@ -14,12 +14,17 @@ type Msg struct {
 	Player *Player `json:"player"`
 }
 
+const (
+	MaxCacheMsgNum = 1000
+)
+
 var (
-	msgs     = []*Msg{}
-	startMid = int64(1)
+	msgs     []*Msg
+	startMid int64
 )
 
 func init() {
+	msgs = []*Msg{}
 	startMid = db.GetLastMsgId()
 	if startMid <= 0 {
 		startMid = 1
@@ -61,7 +66,6 @@ func getMsgsFromTheMid(args service.Args) service.Result {
 
 	index := int(mid - startMid)
 	if index >= len(msgs) {
-		utils.InvalidValueErr("getMsgsFromTheMid", "index >= len(msgs)")
 		return nil
 	}
 
@@ -111,14 +115,26 @@ func addMsgByPid(args service.Args) service.Result {
 		return nil
 	}
 
+	if len(msgs) >= MaxCacheMsgNum {
+		resetInnerMsgs()
+	}
+
 	msgSt := &Msg{
 		Mid:    msgInfo.Mid,
 		Date:   msgInfo.Date,
 		Msg:    msgInfo.Msg,
 		Player: player,
 	}
-
 	msgs = append(msgs, msgSt)
 
 	return msgSt
+}
+
+func resetInnerMsgs() {
+	cnt := len(msgs)
+	if cnt > 0 {
+		lastMsg := msgs[cnt-1]
+		startMid = lastMsg.Mid + 1
+		msgs = msgs[:0]
+	}
 }

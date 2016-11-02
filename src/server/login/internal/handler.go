@@ -11,10 +11,8 @@ import (
 ////////////////////////////////////////////
 // type, const, var
 //
-type Handler func(http.ResponseWriter, *http.Request)
-
 var (
-	urlToHandler = map[string]Handler{
+	urlToHandler = map[string]handler.Handler{
 		"/push": handler.HandlePush,
 		"/pull": handler.HandlePull,
 	}

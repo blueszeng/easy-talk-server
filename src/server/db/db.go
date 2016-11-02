@@ -24,7 +24,7 @@ const (
 
 func init() {
 	// context
-	ctxt, err := mongodb.Dial("account:password@127.0.0.1", 20)
+	ctxt, err := mongodb.Dial("jake:123456@localhost", 20)
 	if err != nil {
 		log.Fatal("db Dial failed: %s", err.Error())
 		return
