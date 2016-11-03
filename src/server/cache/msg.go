@@ -25,10 +25,7 @@ var (
 
 func init() {
 	msgs = []*Msg{}
-	startMid = db.GetLastMsgId()
-	if startMid <= 0 {
-		startMid = 1
-	}
+	startMid = db.GetLastMsgId() + 1
 }
 
 func GetMsgsFromTheMid(mid int64) []*Msg {
