@@ -21,6 +21,7 @@ type Error struct {
 const (
 	Success Errcode = 0
 	Failed  Errcode = 1
+	Offline Errcode = 2
 
 	NameTooLong Errcode = 10
 )
@@ -38,7 +39,7 @@ const (
 )
 
 const (
-	MaxNameLen = 7
+	MaxNameLen = 12
 )
 
 type PushResponse struct {
