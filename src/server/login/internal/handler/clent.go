@@ -81,6 +81,12 @@ func handleUpdateLocation(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	player := cache.GetPlayerByPid(pid)
+	if player == nil {
+		sayErr(w, Offline)
+		return
+	}
+
 	locationX, ok := parseFloat32(req, "locationX")
 	if !ok {
 		sayErr(w, Failed)
@@ -99,9 +105,9 @@ func handleUpdateLocation(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	player := cache.UpdatePlayerLocationByPid(pid, locationX, locationY, locationDetail)
+	player = cache.UpdatePlayerLocationByPid(pid, locationX, locationY, locationDetail)
 	if player == nil {
-		sayErr(w, Failed)
+		sayErr(w, Offline)
 		return
 	}
 
@@ -117,6 +123,12 @@ func handleSendMsg(w http.ResponseWriter, req *http.Request) {
 
 	if pid <= 0 {
 		sayErr(w, Failed)
+		return
+	}
+
+	player := cache.GetPlayerByPid(pid)
+	if player == nil {
+		sayErr(w, Offline)
 		return
 	}
 
@@ -151,6 +163,12 @@ func handleChangeName(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	player := cache.GetPlayerByPid(pid)
+	if player == nil {
+		sayErr(w, Offline)
+		return
+	}
+
 	name, ok := parseString(req, "name")
 	if !ok {
 		sayErr(w, Failed)
@@ -168,7 +186,7 @@ func handleChangeName(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	player := cache.ChangePlayerNameByPid(pid, name)
+	player = cache.ChangePlayerNameByPid(pid, name)
 	if player == nil {
 		sayErr(w, Failed)
 		return
@@ -202,7 +220,7 @@ func HandlePull(w http.ResponseWriter, req *http.Request) {
 
 	player := cache.GetPlayerByPid(pid)
 	if player == nil {
-		sayErr(w, Failed)
+		sayErr(w, Offline)
 		return
 	}
 
