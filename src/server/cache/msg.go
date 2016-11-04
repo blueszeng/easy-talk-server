@@ -8,10 +8,11 @@ import (
 )
 
 type Msg struct {
-	Mid    int64   `json:"mid"`
-	Date   int64   `json:"date"`
-	Msg    string  `json:"msg"`
-	Player *Player `json:"player"`
+	Mid     int64   `json:"mid"`
+	Date    int64   `json:"date"`
+	Channel int32   `json:"channel"`
+	Msg     string  `json:"msg"`
+	Player  *Player `json:"player"`
 }
 
 const (
@@ -28,13 +29,13 @@ func init() {
 	startMid = db.GetLastMsgId() + 1
 }
 
-func GetMsgsFromTheMid(mid int64) []*Msg {
-	ret, _ := srv.AddTask(getMsgsFromTheMid, service.Args{mid}).Result().([]*Msg)
+func GetMsgsFromTheMid(channel int32, mid int64) []*Msg {
+	ret, _ := srv.AddTask(getMsgsFromTheMid, service.Args{channel, mid}).Result().([]*Msg)
 	return ret
 }
 
-func AddMsgByPid(pid int64, msg string) *Msg {
-	ret, _ := srv.AddTask(addMsgByPid, service.Args{pid, msg}).Result().(*Msg)
+func AddMsgByPid(pid int64, channel int32, msg string) *Msg {
+	ret, _ := srv.AddTask(addMsgByPid, service.Args{pid, channel, msg}).Result().(*Msg)
 	return ret
 }
 
@@ -46,14 +47,25 @@ func getMsgsFromTheMid(args service.Args) service.Result {
 		return nil
 	}
 
-	if len(args) < 1 {
-		utils.ArgsNumberErr("getMsgsFromTheMid", 1)
+	if len(args) < 2 {
+		utils.ArgsNumberErr("getMsgsFromTheMid", 2)
 		return nil
 	}
 
-	mid, ok := args[0].(int64)
+	channel, ok := args[0].(int32)
 	if !ok {
 		utils.ArgsTypeCastErr("getMsgsFromTheMid", 0)
+		return nil
+	}
+
+	if !ValidChannel(channel) {
+		utils.InvalidValueErr("getMsgsFromTheMid", "invalid channel")
+		return nil
+	}
+
+	mid, ok := args[1].(int64)
+	if !ok {
+		utils.ArgsTypeCastErr("getMsgsFromTheMid", 1)
 		return nil
 	}
 
@@ -70,8 +82,8 @@ func getMsgsFromTheMid(args service.Args) service.Result {
 }
 
 func addMsgByPid(args service.Args) service.Result {
-	if len(args) < 2 {
-		utils.ArgsNumberErr("addMsgByPid", 2)
+	if len(args) < 3 {
+		utils.ArgsNumberErr("addMsgByPid", 3)
 		return nil
 	}
 
@@ -92,9 +104,20 @@ func addMsgByPid(args service.Args) service.Result {
 		return nil
 	}
 
-	msg, ok := args[1].(string)
+	channel, ok := args[1].(int32)
 	if !ok {
 		utils.ArgsTypeCastErr("addMsgByPid", 1)
+		return nil
+	}
+
+	if !ValidChannel(channel) {
+		utils.InvalidValueErr("addMsgByPid", "invalid channel")
+		return nil
+	}
+
+	msg, ok := args[2].(string)
+	if !ok {
+		utils.ArgsTypeCastErr("addMsgByPid", 2)
 		return nil
 	}
 
@@ -104,9 +127,10 @@ func addMsgByPid(args service.Args) service.Result {
 	}
 
 	msgInfo := &db.MsgInfo{
-		Pid:  pid,
-		Date: time.Now().Unix(),
-		Msg:  msg,
+		Pid:     pid,
+		Date:    time.Now().Unix(),
+		Channel: channel,
+		Msg:     msg,
 	}
 	if !db.AddMsgInfo(msgInfo) {
 		return nil
@@ -117,10 +141,11 @@ func addMsgByPid(args service.Args) service.Result {
 	}
 
 	msgSt := &Msg{
-		Mid:    msgInfo.Mid,
-		Date:   msgInfo.Date,
-		Msg:    msgInfo.Msg,
-		Player: player,
+		Mid:     msgInfo.Mid,
+		Date:    msgInfo.Date,
+		Channel: msgInfo.Channel,
+		Msg:     msgInfo.Msg,
+		Player:  player,
 	}
 	msgs = append(msgs, msgSt)
 

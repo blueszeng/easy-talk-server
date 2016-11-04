@@ -99,13 +99,19 @@ func handleUpdateLocation(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	locationZ, ok := parseFloat32(req, "locationZ")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
 	locationDetail, ok := parseString(req, "locationDetail")
 	if !ok {
 		sayErr(w, Failed)
 		return
 	}
 
-	player = cache.UpdatePlayerLocationByPid(pid, locationX, locationY, locationDetail)
+	player = cache.UpdatePlayerLocationByPid(pid, locationX, locationY, locationZ, locationDetail)
 	if player == nil {
 		sayErr(w, Offline)
 		return
@@ -132,6 +138,17 @@ func handleSendMsg(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	channel, ok := parseInt32(req, "channel")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
+	if !cache.ValidChannel(channel) {
+		sayErr(w, Failed)
+		return
+	}
+
 	msg, ok := parseString(req, "msg")
 	if !ok {
 		sayErr(w, Failed)
@@ -143,7 +160,7 @@ func handleSendMsg(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if cache.AddMsgByPid(pid, msg) == nil {
+	if cache.AddMsgByPid(pid, channel, msg) == nil {
 		sayErr(w, Failed)
 		return
 	}
@@ -224,6 +241,12 @@ func HandlePull(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	channel, ok := parseInt32(req, "channel")
+	if !ok {
+		sayErr(w, Failed)
+		return
+	}
+
 	mid, ok := parseInt64(req, "mid")
 	if !ok {
 		sayErr(w, Failed)
@@ -235,7 +258,7 @@ func HandlePull(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	msgs := cache.GetMsgsFromTheMid(mid)
+	msgs := cache.GetMsgsFromTheMid(channel, mid)
 	if len(msgs) == 0 {
 		sayErr(w, Success)
 		return

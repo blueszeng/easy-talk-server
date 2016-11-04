@@ -45,6 +45,19 @@ func parseInt64(req *http.Request, key string) (int64, bool) {
 	return data, true
 }
 
+func parseInt32(req *http.Request, key string) (int32, bool) {
+	datas := req.PostForm[key]
+	if len(datas) == 0 {
+		return 0, false
+	}
+
+	data, err := utils.StrToInt32(datas[0])
+	if err != nil {
+		return 0, false
+	}
+	return data, true
+}
+
 func parseFloat32(req *http.Request, key string) (float32, bool) {
 	datas := req.PostForm[key]
 	if len(datas) == 0 {

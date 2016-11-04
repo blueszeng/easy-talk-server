@@ -10,19 +10,21 @@ import (
 )
 
 type MsgInfo struct {
-	Mid  int64
-	Pid  int64
-	Date int64
-	Msg  string
+	Mid     int64
+	Pid     int64
+	Date    int64
+	Channel int32
+	Msg     string
 }
 
 const (
 	MsgCollectionName = "msg"
 
-	MsgCollectionMidKey  = "mid"
-	MsgCollectionPidKey  = "pid"
-	MsgCollectionDateKey = "date"
-	MsgCollectionMsgKey  = "msg"
+	MsgCollectionMidKey     = "mid"
+	MsgCollectionPidKey     = "pid"
+	MsgCollectionDateKey    = "date"
+	MsgCollectionChannelKey = "channel"
+	MsgCollectionMsgKey     = "msg"
 
 	MsgMidCounterKey = "mid"
 )

@@ -21,6 +21,7 @@ type Player struct {
 	Color          Color   `json:"color"`
 	LocationX      float32 `json:"locationX"`
 	LocationY      float32 `json:"locationY"`
+	LocationZ      float32 `json:"locationZ"`
 	LocationDetail string  `json:"locationDetail"`
 }
 
@@ -39,8 +40,8 @@ func GetPlayerByPid(pid int64) *Player {
 	return ret
 }
 
-func UpdatePlayerLocationByPid(pid int64, locationX float32, locationY float32, locationDetail string) *Player {
-	ret, _ := srv.AddTask(updatePlayerLocationByPid, service.Args{pid, locationX, locationY, locationDetail}).Result().(*Player)
+func UpdatePlayerLocationByPid(pid int64, locationX float32, locationY float32, locationZ float32, locationDetail string) *Player {
+	ret, _ := srv.AddTask(updatePlayerLocationByPid, service.Args{pid, locationX, locationY, locationZ, locationDetail}).Result().(*Player)
 	return ret
 }
 
@@ -114,8 +115,8 @@ func getPlayerByPid(args service.Args) service.Result {
 }
 
 func updatePlayerLocationByPid(args service.Args) service.Result {
-	if len(args) < 4 {
-		utils.ArgsNumberErr("updatePlayerLocationByPid", 4)
+	if len(args) < 5 {
+		utils.ArgsNumberErr("updatePlayerLocationByPid", 5)
 		return nil
 	}
 
@@ -142,9 +143,15 @@ func updatePlayerLocationByPid(args service.Args) service.Result {
 		return nil
 	}
 
-	locationDetail, ok := args[3].(string)
+	locationZ, ok := args[3].(float32)
 	if !ok {
 		utils.ArgsTypeCastErr("updatePlayerLocationByPid", 3)
+		return nil
+	}
+
+	locationDetail, ok := args[4].(string)
+	if !ok {
+		utils.ArgsTypeCastErr("updatePlayerLocationByPid", 4)
 		return nil
 	}
 
@@ -156,6 +163,7 @@ func updatePlayerLocationByPid(args service.Args) service.Result {
 
 	player.LocationX = locationX
 	player.LocationY = locationY
+	player.LocationZ = locationZ
 	player.LocationDetail = locationDetail
 
 	return player
