@@ -15,10 +15,6 @@ type Msg struct {
 	Player  *Player `json:"player"`
 }
 
-const (
-	MaxCacheMsgNum = 1000
-)
-
 var (
 	msgs     []*Msg
 	startMid int64

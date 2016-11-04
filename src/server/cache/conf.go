@@ -1,6 +1,15 @@
 package cache
 
+//
+// checker
+//
+const (
+	CheckOnlineNumInterval = 60 * 5
+)
+
+//
 // channel
+//
 const (
 	MinChannel = 0
 
@@ -12,3 +21,10 @@ const (
 func ValidChannel(ch int32) bool {
 	return (MinChannel <= ch) && (ch <= MaxChannel)
 }
+
+//
+// msg
+//
+const (
+	MaxCacheMsgNum = 500
+)

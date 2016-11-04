@@ -12,10 +12,6 @@ import (
 ////////////////////////////////////////////
 // type, const, var
 //
-const (
-	CheckOnlineNumInterval = 60 * 5
-)
-
 var (
 	srv             = service.NewService1(update)
 	curTime float32 = 0
