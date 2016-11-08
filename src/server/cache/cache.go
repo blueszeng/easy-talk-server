@@ -9,26 +9,45 @@ import (
 	"github.com/name5566/leaf/log"
 )
 
-////////////////////////////////////////////
-// type, const, var
+// checker
+type Checker struct {
+	curTime  float32
+	interval float32
+	check    func()
+}
+
+func (c *Checker) update(dt float32) {
+	c.curTime += dt
+	if c.curTime > c.interval {
+		c.curTime = 0
+		if c.check != nil {
+			c.check()
+		}
+	}
+}
+
 //
 var (
-	srv             = service.NewService1(update)
-	curTime float32 = 0
+	srv      = service.NewService1(update)
+	checkers = []*Checker{
+		&Checker{
+			interval: CheckOnlineNumInterval,
+			check:    checkOnlineNum,
+		},
+		&Checker{
+			interval: CheckPlayerAliveInterval,
+			check:    checkInnerPlayerAliveTime,
+		},
+	}
 )
 
-////////////////////////////////////////////
-// func
-//
 func init() {
 	srv.Start()
 }
 
 func update(dt float32) {
-	curTime += dt
-	if curTime > CheckOnlineNumInterval {
-		curTime = 0
-		checkOnlineNum()
+	for _, c := range checkers {
+		c.update(dt)
 	}
 }
 

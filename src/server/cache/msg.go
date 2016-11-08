@@ -21,7 +21,7 @@ var (
 )
 
 func init() {
-	msgs = []*Msg{}
+	msgs = make([]*Msg, 0, MaxCacheMsgNum)
 	startMid = db.GetLastMsgId() + 1
 }
 
@@ -144,6 +144,7 @@ func addMsgByPid(args service.Args) service.Result {
 		Player:  player,
 	}
 	msgs = append(msgs, msgSt)
+	updateInnerPlayerLastAliveTime(pid)
 
 	return msgSt
 }

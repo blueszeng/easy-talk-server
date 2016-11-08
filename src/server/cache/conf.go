@@ -4,7 +4,12 @@ package cache
 // checker
 //
 const (
-	CheckOnlineNumInterval = 60 * 5
+	CheckOnlineNumInterval   = 60 * 5
+	CheckPlayerAliveInterval = 60
+)
+
+const (
+	MaxPlayerAliveInterval = 60 * 3
 )
 
 //

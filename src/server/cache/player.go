@@ -16,6 +16,8 @@ type Color struct {
 }
 
 type Player struct {
+	did string
+
 	Pid            int64   `json:"pid"`
 	Name           string  `json:"name"`
 	Color          Color   `json:"color"`
@@ -26,8 +28,9 @@ type Player struct {
 }
 
 var (
-	didToPid    = map[string]int64{}
-	pidToPlayer = map[int64]*Player{}
+	didToPid           = map[string]int64{}
+	pidToPlayer        = map[int64]*Player{}
+	pidToLastAliveTime = map[int64]int64{}
 )
 
 func GetPlayerByDid(did string) *Player {
@@ -84,12 +87,15 @@ func getPlayerByDid(args service.Args) service.Result {
 		}
 
 		player = &Player{
+			did:   did,
 			Pid:   playerInfo.Pid,
 			Name:  playerInfo.Name,
 			Color: getRandomColor(),
 		}
+		didToPid[did] = player.Pid
 		pidToPlayer[player.Pid] = player
 	}
+	updateInnerPlayerLastAliveTime(player.Pid)
 
 	return player
 }
@@ -165,6 +171,7 @@ func updatePlayerLocationByPid(args service.Args) service.Result {
 	player.LocationY = locationY
 	player.LocationZ = locationZ
 	player.LocationDetail = locationDetail
+	updateInnerPlayerLastAliveTime(pid)
 
 	return player
 }
@@ -217,6 +224,7 @@ func changePlayerNameByPid(args service.Args) service.Result {
 	}
 
 	player.Name = name
+	updateInnerPlayerLastAliveTime(pid)
 	return player
 }
 
@@ -253,6 +261,30 @@ func getInnerPlayerByPid(pid int64) *Player {
 	return pidToPlayer[pid]
 }
 
+func updateInnerPlayerLastAliveTime(pid int64) {
+	if getInnerPlayerByPid(pid) != nil {
+		pidToLastAliveTime[pid] = time.Now().Unix()
+	}
+}
+
+func checkInnerPlayerAliveTime() {
+	now := time.Now().Unix()
+	for pid, t := range pidToLastAliveTime {
+		if now-t > MaxPlayerAliveInterval {
+			removeInnerPlayer(pid)
+		}
+	}
+}
+
 func getInnerPlayerNum() int {
 	return len(pidToPlayer)
+}
+
+func removeInnerPlayer(pid int64) {
+	player := getInnerPlayerByPid(pid)
+	if player != nil {
+		delete(didToPid, player.did)
+		delete(pidToPlayer, pid)
+	}
+	delete(pidToLastAliveTime, pid)
 }
