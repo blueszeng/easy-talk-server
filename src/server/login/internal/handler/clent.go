@@ -129,12 +129,14 @@ func handleSendMsg(w http.ResponseWriter, req *http.Request) {
 
 	if pid <= 0 {
 		sayErr(w, Failed)
+		utils.InvalidValueErr("handleSendMsg", "pid <= 0")
 		return
 	}
 
 	player := cache.GetPlayerByPid(pid)
 	if player == nil {
 		sayErr(w, Offline)
+		utils.InvalidValueErr("handleSendMsg", "player offline")
 		return
 	}
 
@@ -149,6 +151,19 @@ func handleSendMsg(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	msgType, ok := parseString(req, "msgType")
+	if !ok {
+		sayErr(w, Failed)
+		utils.InvalidValueErr("handleSendMsg", "parse msg type failed")
+		return
+	}
+
+	if !cache.ValidMsgType(msgType) {
+		sayErr(w, Failed)
+		utils.InvalidValueErr("handleSendMsg", "invalid msg type: "+msgType)
+		return
+	}
+
 	msg, ok := parseString(req, "msg")
 	if !ok {
 		sayErr(w, Failed)
@@ -160,7 +175,7 @@ func handleSendMsg(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if cache.AddMsgByPid(pid, channel, msg) == nil {
+	if cache.AddMsgByPid(pid, channel, msgType, msg) == nil {
 		sayErr(w, Failed)
 		return
 	}

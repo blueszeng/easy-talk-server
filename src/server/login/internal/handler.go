@@ -2,6 +2,8 @@ package internal
 
 import (
 	"net/http"
+	"server/base/conf"
+	"server/cache"
 	"server/login/internal/handler"
 	"time"
 
@@ -26,12 +28,14 @@ func init() {
 		http.HandleFunc(url, handler)
 	}
 
+	http.Handle(cache.ImgPrefix, http.StripPrefix(cache.ImgPrefix, http.FileServer(http.Dir(cache.ImgDir))))
+
 	go startHttpServer()
 }
 
 func startHttpServer() {
 	server := &http.Server{
-		Addr:         ":9123",
+		Addr:         conf.Server.TCPAddr,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}

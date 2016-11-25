@@ -31,5 +31,21 @@ func ValidChannel(ch int32) bool {
 // msg
 //
 const (
+	ImgDir    = "img"
+	ImgPrefix = "/msg-img/"
+)
+
+// msg type
+const (
+	TextMsg  = "text"
+	ImageMsg = "image"
+)
+
+func ValidMsgType(mtype string) bool {
+	return mtype == TextMsg ||
+		mtype == ImageMsg
+}
+
+const (
 	MaxCacheMsgNum = 500
 )

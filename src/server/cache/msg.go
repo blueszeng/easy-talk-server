@@ -1,9 +1,17 @@
 package cache
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
+	"image"
+	"image/png"
+	"os"
+	"server/base/conf"
 	"server/base/service"
 	"server/base/utils"
 	"server/db"
+	"strconv"
 	"time"
 )
 
@@ -11,6 +19,7 @@ type Msg struct {
 	Mid     int64   `json:"mid"`
 	Date    int64   `json:"date"`
 	Channel int32   `json:"channel"`
+	MsgType string  `json:"msgType"`
 	Msg     string  `json:"msg"`
 	Player  *Player `json:"player"`
 }
@@ -30,8 +39,8 @@ func GetMsgsFromTheMid(channel int32, mid int64) []*Msg {
 	return ret
 }
 
-func AddMsgByPid(pid int64, channel int32, msg string) *Msg {
-	ret, _ := srv.AddTask(addMsgByPid, service.Args{pid, channel, msg}).Result().(*Msg)
+func AddMsgByPid(pid int64, channel int32, msgType string, msg string) *Msg {
+	ret, _ := srv.AddTask(addMsgByPid, service.Args{pid, channel, msgType, msg}).Result().(*Msg)
 	return ret
 }
 
@@ -78,8 +87,8 @@ func getMsgsFromTheMid(args service.Args) service.Result {
 }
 
 func addMsgByPid(args service.Args) service.Result {
-	if len(args) < 3 {
-		utils.ArgsNumberErr("addMsgByPid", 3)
+	if len(args) < 4 {
+		utils.ArgsNumberErr("addMsgByPid", 4)
 		return nil
 	}
 
@@ -111,9 +120,19 @@ func addMsgByPid(args service.Args) service.Result {
 		return nil
 	}
 
-	msg, ok := args[2].(string)
+	msgType, ok := args[2].(string)
 	if !ok {
 		utils.ArgsTypeCastErr("addMsgByPid", 2)
+		return nil
+	}
+
+	if !ValidMsgType(msgType) {
+		utils.InvalidValueErr("addMsgByPid", "invalid msg type")
+	}
+
+	msg, ok := args[3].(string)
+	if !ok {
+		utils.ArgsTypeCastErr("addMsgByPid", 3)
 		return nil
 	}
 
@@ -122,12 +141,87 @@ func addMsgByPid(args service.Args) service.Result {
 		return nil
 	}
 
-	msgInfo := &db.MsgInfo{
-		Pid:     pid,
-		Date:    time.Now().Unix(),
-		Channel: channel,
-		Msg:     msg,
+	switch msgType {
+	case TextMsg:
+		return addInnerTextMsg(player, channel, msg)
+	case ImageMsg:
+		return addInnerImageMsg(player, channel, msg)
+	default:
+		utils.InvalidValueErr("addMsgByPid", "invalid msg type: "+msgType)
+		return nil
 	}
+}
+
+//
+// inner func
+//
+func addInnerTextMsg(player *Player, channel int32, msg string) *Msg {
+	msgInfo := &db.MsgInfo{
+		Pid:            player.Pid,
+		Date:           time.Now().Unix(),
+		LocationX:      player.LocationX,
+		LocationY:      player.LocationY,
+		LocationZ:      player.LocationZ,
+		LocationDetail: player.LocationDetail,
+		Channel:        channel,
+		MsgType:        TextMsg,
+		Msg:            msg,
+	}
+	return addInnerMsgByMsgInfo(msgInfo, player)
+}
+
+func addInnerImageMsg(player *Player, channel int32, msg string) *Msg {
+	buff, err := base64.StdEncoding.DecodeString(msg)
+	if err != nil {
+		utils.InvalidValueErr("addInnerImageMsg", "base64 decode failed: "+err.Error())
+		return nil
+	}
+
+	buffer := bytes.NewBuffer(buff)
+	gzipReader, err := gzip.NewReader(buffer)
+	if err != nil {
+		utils.InvalidValueErr("addInnerImageMsg", "new gzip reader failed: "+err.Error())
+		return nil
+	}
+	defer gzipReader.Close()
+
+	img, _, err := image.Decode(gzipReader)
+	if err != nil {
+		utils.InvalidValueErr("addInnerImageMsg", "image decode failed: "+err.Error())
+		return nil
+	}
+
+	imgFileName := strconv.Itoa(int(player.Pid)) + "_" + utils.GetUUID() + ".png"
+	imgFile, err := os.Create("./" + ImgDir + "/" + imgFileName)
+	if err != nil {
+		utils.InvalidValueErr("addInnerImageMsg", "create file failed: "+err.Error())
+		return nil
+	}
+	defer imgFile.Close()
+
+	png.Encode(imgFile, img)
+
+	imgUrl := "http://" + conf.Server.TCPAddr + ImgPrefix + imgFileName
+	msgInfo := &db.MsgInfo{
+		Pid:            player.Pid,
+		Date:           time.Now().Unix(),
+		LocationX:      player.LocationX,
+		LocationY:      player.LocationY,
+		LocationZ:      player.LocationZ,
+		LocationDetail: player.LocationDetail,
+		Channel:        channel,
+		MsgType:        ImageMsg,
+		Msg:            imgUrl,
+	}
+	return addInnerMsgByMsgInfo(msgInfo, player)
+}
+
+func addInnerMsgByMsgInfo(msgInfo *db.MsgInfo, player *Player) *Msg {
+	if msgInfo == nil || player == nil {
+		utils.InvalidValueErr("addInnerMsgByMsgInfo", "msgInfo == nil || player == nil")
+		return nil
+	}
+
 	if !db.AddMsgInfo(msgInfo) {
 		return nil
 	}
@@ -140,11 +234,12 @@ func addMsgByPid(args service.Args) service.Result {
 		Mid:     msgInfo.Mid,
 		Date:    msgInfo.Date,
 		Channel: msgInfo.Channel,
+		MsgType: msgInfo.MsgType,
 		Msg:     msgInfo.Msg,
 		Player:  player,
 	}
 	msgs = append(msgs, msgSt)
-	updateInnerPlayerLastAliveTime(pid)
+	updateInnerPlayerLastAliveTime(player.Pid)
 
 	return msgSt
 }
