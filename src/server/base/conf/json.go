@@ -12,6 +12,7 @@ var Server struct {
 	LogPath    string
 	WSAddr     string
 	TCPAddr    string
+	TCPPort    string
 	MaxConnNum int
 }
 

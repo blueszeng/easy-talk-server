@@ -40,6 +40,22 @@ func LoadPlayerInfoByDid(did string) *PlayerInfo {
 	return info
 }
 
+func LoadPlayerInfoByPid(pid int64) *PlayerInfo {
+	s := db.Session()
+	defer db.Disuse(s)
+
+	c := s.DB(DBName).C(PlayerCollectionName)
+
+	info := &PlayerInfo{}
+	err := c.Find(bson.M{
+		PlayerCollectionPidKey: pid,
+	}).One(info)
+	if err != nil {
+		return nil
+	}
+	return info
+}
+
 func AddPlayerInfo(info *PlayerInfo) bool {
 	if info == nil {
 		return false

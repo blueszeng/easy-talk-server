@@ -47,5 +47,6 @@ func ValidMsgType(mtype string) bool {
 }
 
 const (
+	MinCacheMsgNum = 100
 	MaxCacheMsgNum = 500
 )

@@ -1,6 +1,7 @@
 {
 	"LogLevel": "debug",
 	"LogPath": "log",
-	"TCPAddr": "10.0.1.50:9123",
+	"TCPAddr": "10.0.1.50",
+	"TCPPort": "9123",
 	"MaxConnNum": 20000
 }

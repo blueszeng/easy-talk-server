@@ -31,7 +31,48 @@ var (
 
 func init() {
 	msgs = make([]*Msg, 0, MaxCacheMsgNum)
-	startMid = db.GetLastMsgId() + 1
+	last := db.GetLastMsgId()
+	start := last - MinCacheMsgNum + 1
+	if start < 1 {
+		start = 1
+	}
+
+	cachedPlayerInfos := map[int64]*db.PlayerInfo{}
+	for id := start; id <= last; id++ {
+		msgInfo := db.LoadMsgInfoByMid(id)
+		if msgInfo != nil {
+			playerInfo := cachedPlayerInfos[msgInfo.Pid]
+			if playerInfo == nil {
+				playerInfo = db.LoadPlayerInfoByPid(msgInfo.Pid)
+				if playerInfo != nil {
+					cachedPlayerInfos[playerInfo.Pid] = playerInfo
+				}
+			}
+
+			if playerInfo != nil {
+				msgs = append(msgs, &Msg{
+					Mid:     msgInfo.Mid,
+					Date:    msgInfo.Date,
+					Channel: msgInfo.Channel,
+					MsgType: msgInfo.MsgType,
+					Msg:     msgInfo.Msg,
+					Player: &Player{
+						Pid:            playerInfo.Pid,
+						Name:           playerInfo.Name,
+						Color:          getRandomColor(),
+						LocationX:      msgInfo.LocationX,
+						LocationY:      msgInfo.LocationY,
+						LocationZ:      msgInfo.LocationZ,
+						LocationDetail: msgInfo.LocationDetail,
+					},
+				})
+			}
+		}
+	}
+
+	if len(msgs) > 0 {
+		startMid = msgs[0].Mid
+	}
 }
 
 func GetMsgsFromTheMid(channel int32, mid int64) []*Msg {
@@ -201,7 +242,7 @@ func addInnerImageMsg(player *Player, channel int32, msg string) *Msg {
 
 	png.Encode(imgFile, img)
 
-	imgUrl := "http://" + conf.Server.TCPAddr + ImgPrefix + imgFileName
+	imgUrl := "http://" + conf.Server.TCPAddr + ":" + conf.Server.TCPPort + ImgPrefix + imgFileName
 	msgInfo := &db.MsgInfo{
 		Pid:            player.Pid,
 		Date:           time.Now().Unix(),
@@ -226,29 +267,33 @@ func addInnerMsgByMsgInfo(msgInfo *db.MsgInfo, player *Player) *Msg {
 		return nil
 	}
 
-	if len(msgs) >= MaxCacheMsgNum {
-		resetInnerMsgs()
-	}
-
+	playerCopy := *player
 	msgSt := &Msg{
 		Mid:     msgInfo.Mid,
 		Date:    msgInfo.Date,
 		Channel: msgInfo.Channel,
 		MsgType: msgInfo.MsgType,
 		Msg:     msgInfo.Msg,
-		Player:  player,
+		Player:  &playerCopy,
 	}
 	msgs = append(msgs, msgSt)
 	updateInnerPlayerLastAliveTime(player.Pid)
+
+	if len(msgs) >= MaxCacheMsgNum {
+		resetInnerMsgs()
+	}
 
 	return msgSt
 }
 
 func resetInnerMsgs() {
 	cnt := len(msgs)
-	if cnt > 0 {
-		lastMsg := msgs[cnt-1]
-		startMid = lastMsg.Mid + 1
-		msgs = msgs[:0]
+	if cnt >= MaxCacheMsgNum {
+		newStartIndex := cnt - MinCacheMsgNum
+		for i := 0; i < MinCacheMsgNum; i++ {
+			msgs[i] = msgs[newStartIndex+i]
+		}
+		msgs = msgs[:MinCacheMsgNum]
+		startMid = msgs[0].Mid
 	}
 }

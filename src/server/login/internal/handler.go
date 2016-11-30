@@ -2,6 +2,7 @@ package internal
 
 import (
 	"net/http"
+	"server/base/conf"
 	"server/cache"
 	"server/login/internal/handler"
 	"time"
@@ -34,7 +35,7 @@ func init() {
 
 func startHttpServer() {
 	server := &http.Server{
-		Addr:         ":9123",
+		Addr:         ":" + conf.Server.TCPPort,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
